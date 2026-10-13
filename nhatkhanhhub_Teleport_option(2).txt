@@ -1,0 +1,526 @@
+local function geniter(f, s, c)
+	if type(f) ~= "function" then
+		local mt = getmetatable(f)
+
+		if type(mt) == "table" and mt.__iter then
+			f, s, c = mt.__iter(f)
+		elseif type(f) == "table" then
+			f, s, c = next, f, nil
+		end
+	end
+
+	return function()
+		local r = table.pack(f(s, c))
+
+		if r[1] == nil then
+			return false
+		end
+
+		c = r[1]
+
+		return true, table.unpack(r, 1, r.n)
+	end
+end
+
+local CFrame_ = CFrame
+local cFrameNew = CFrame_ and CFrame_.new
+local lookAt = CFrame_ and CFrame_.lookAt
+local Angles = CFrame_ and CFrame_.Angles
+local fromMatrix = CFrame_ and CFrame_.fromMatrix
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- INSERTED BY NK-IT: utility for instant teleport and safe stop velocity
+local genv = getgenv and getgenv() or _G
+
+genv.NK_InstantTeleport = genv.NK_InstantTeleport or {}
+local IT = genv.NK_InstantTeleport
+IT.Enabled = IT.Enabled == nil and true or IT.Enabled
+IT.Yaw = IT.Yaw or 300
+IT.DefaultOffset = IT.DefaultOffset or Vector3.new(12, 0, 12)
+IT.ButtonEnabled = IT.ButtonEnabled == nil and true or IT.ButtonEnabled
+
+genv.NK_StealSpeedBoost = genv.NK_StealSpeedBoost or {}
+local SB = genv.NK_StealSpeedBoost
+SB.Enabled = SB.Enabled == nil and true or SB.Enabled
+SB.Multiplier = SB.Multiplier or 2
+SB._origTween = nil
+SB._active = false
+
+local function StopVelocity(part)
+	if not part then return end
+	pcall(function()
+		part.AssemblyLinearVelocity = Vector3.zero
+		part.AssemblyAngularVelocity = Vector3.zero
+	end)
+end
+
+local function GetRootPart()
+	local character = LocalPlayer and LocalPlayer.Character
+	if not character then return nil end
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsDescendantOf(workspace) then
+		return root
+	end
+	return nil
+end
+
+local function ApplyInstantTeleport(targetPosition, yawDeg)
+	if typeof(targetPosition) ~= "Vector3" then
+		return false
+	end
+
+	local root = GetRootPart()
+	if not root then return false end
+
+	pcall(function()
+		root.CFrame = CFrame.new(targetPosition.X, targetPosition.Y, targetPosition.Z) * CFrame.Angles(0, math.rad(yawDeg or IT.Yaw), 0)
+		StopVelocity(root)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+	end)
+	return true
+end
+
+local function InstantTeleportOffset(offsetVector3)
+	local root = GetRootPart()
+	if not root then return false end
+	local pos = root.Position
+	local dest = pos + (typeof(offsetVector3) == "Vector3" and offsetVector3 or IT.DefaultOffset)
+	return ApplyInstantTeleport(dest, IT.Yaw)
+end
+
+IT.Apply = ApplyInstantTeleport
+IT.Offset = InstantTeleportOffset
+IT.GetRootPart = GetRootPart
+
+local function StartStealSpeedBoost()
+	if not SB.Enabled or SB._active then return end
+	SB._active = true
+	pcall(function()
+		if type(_G.senaV4Config) == "table" then
+			SB._origTween = _G.senaV4Config.TweenSpeedMultiplier
+			local orig = tonumber(_G.senaV4Config.TweenSpeedMultiplier) or 60
+			_G.senaV4Config.TweenSpeedMultiplier = orig * SB.Multiplier
+		end
+	end)
+end
+
+local function StopStealSpeedBoost()
+	if not SB._active then return end
+	SB._active = false
+	pcall(function()
+		if type(_G.senaV4Config) == "table" and SB._origTween ~= nil then
+			_G.senaV4Config.TweenSpeedMultiplier = SB._origTween
+		end
+		SB._origTween = nil
+	end)
+end
+
+SB.Start = StartStealSpeedBoost
+SB.Stop = StopStealSpeedBoost
+
+-- Remove stale minimized-logo widgets left by older Nhat Khanh/Sena GUI versions.
+task.defer(function()
+    pcall(function()
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        local cg = nil
+        pcall(function() cg = game:GetService("CoreGui") end)
+        local roots = {pg, cg}
+        for _, root in ipairs(roots) do
+            if root then
+                for _, obj in ipairs(root:GetDescendants()) do
+                    if obj:IsA("ScreenGui") then
+                        local n = string.lower(obj.Name or "")
+                        if n == "nhatkhanhhubskullminigui" or n == "ghosthubskullminigui" or n == "senahubminigui" then
+                            obj:Destroy()
+                        end
+                    elseif obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                        if obj.Visible and (obj.Text == "S" or obj.Text == "Ｓ") then
+                            local parent = obj.Parent
+                            if parent and (parent:IsA("ImageButton") or parent:IsA("TextButton")) then
+                                parent:Destroy()
+                            else
+                                obj:Destroy()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+game:GetService("TweenService")
+
+local TeleportService = game:GetService("TeleportService")
+local v14, genv, v16, __SenaV4TweenRuntimeGeneration, t1, v19, v20, v21, v22, v23
+local v24, v25, v26, v27, v28, v29, v30, v31, v32, v33
+
+do
+	local Workspace = game:GetService("Workspace")
+
+	v14 = function()
+		return Workspace:FindFirstChild("World") or Workspace:FindFirstChild("__OBJECTS")
+	end
+	genv = getgenv and getgenv() or _G
+
+	if type(genv.__SenaV4HubShutdown) == "function" then
+		pcall(genv.__SenaV4HubShutdown)
+	end
+
+	local t2 = {}
+
+	genv.__SenaV4HubSession = t2
+	v16 = function()
+		return genv.__SenaV4HubSession == t2
+	end
+	genv.__SenaV4IdentityGetter = genv.getthreadidentity or genv.get_thread_identity or genv.getidentity or genv.getthreadcontext or genv.get_thread_context
+	genv.__SenaV4IdentitySetter = genv.setthreadidentity or genv.set_thread_identity or genv.setidentity or genv.setthreadcontext or genv.set_thread_context
+
+	local __SenaV4IdentitySetter = genv.__SenaV4IdentitySetter
+
+	if type(__SenaV4IdentitySetter) == "function" then
+		pcall(__SenaV4IdentitySetter, 8)
+		genv.__SenaV4UICapabilityIdentity = 8
+	end
+
+	if not (rawget(_G, "setfpscap") or rawget(_G, "set_fps_cap")) and type(setfpscap) == "function" then
+	end
+
+	genv.__SenaV4SetCapFps = function(p1)
+		local v37 = math.clamp(math.floor(tonumber(p1) or 240), 1, 999)
+		local setfpscap_ = rawget(_G, "setfpscap") or rawget(_G, "set_fps_cap") or type(setfpscap) == "function" and setfpscap
+
+		if type(setfpscap_) == "function" then
+			return pcall(setfpscap_, v37)
+		end
+
+		return false
+	end
+
+	if type(genv.__SenaV4TweenRuntimeCleanup) == "function" then
+		pcall(genv.__SenaV4TweenRuntimeCleanup)
+	end
+
+	if type(genv.__SenaV4EggRuntimeCleanup) == "function" then
+		pcall(genv.__SenaV4EggRuntimeCleanup)
+	end
+
+	if type(genv.__SenaV4AntiGuardCleanup) == "function" then
+		pcall(genv.__SenaV4AntiGuardCleanup)
+	end
+
+	genv.__SenaV4TweenRuntimeGeneration = (genv.__SenaV4TweenRuntimeGeneration or 0) + 1
+	__SenaV4TweenRuntimeGeneration = genv.__SenaV4TweenRuntimeGeneration
+	t1 = {
+		KEY = "__SenaV4StealAnEggMovementSpoof",
+		VERSION = 436,
+		INTEGRITY_KEY = "__SenaV4StealAnEggIntegritySpoof",
+		SIGNAL = "ClientCharacter: GetDebugSnapshot",
+		HEADROOM = 1.35,
+		CLAMP = 0.15,
+		PADDING = 24,
+		MULTIPLIER = 10,
+		MIN_INPUT = 20,
+		MAX_INPUT = 100,
+		DEF_INPUT = 60,
+		MIN_SPEED = 200,
+		MAX_SPEED = 1000,
+		DEF_SPEED = 600,
+		FIELDS = {
+			"LastObservedSample",
+			"LastSample",
+			"LastGoodSample",
+			"LastGameplayTrustedSample",
+			"LastValidatedSample",
+			"LastValidatedGroundedSample",
+			"LastConfirmedGroundSample",
+			"CandidateGroundedSample"
+		}
+	}
+
+	local KEY = t1.KEY
+	local VERSION = t1.VERSION
+	local INTEGRITY_KEY = t1.INTEGRITY_KEY
+	local SIGNAL = t1.SIGNAL
+	local HEADROOM = t1.HEADROOM
+	local CLAMP = t1.CLAMP
+	local PADDING = t1.PADDING
+	local MIN_SPEED = t1.MIN_SPEED
+	local MAX_SPEED = t1.MAX_SPEED
+	local DEF_SPEED = t1.DEF_SPEED
+	local FIELDS = t1.FIELDS
+	local n1 = 60
+
+	game:GetService("RunService").Heartbeat:Connect(function(dt)
+		if dt and dt > 0 then
+			n1 = n1 * 0.9 + 1 / dt * 0.1
+		end
+	end)
+	v19 = function()
+		return n1
+	end
+
+	local u51
+	local v52 = tostring(math.random(100000, 999999))
+	local connection
+	local connection2
+	local t3 = {}
+	local u56
+
+	v20 = nil
+
+	local function v57()
+		for _, child in ipairs(Workspace:GetChildren()) do
+			if child:IsA("BasePart") and child.Name == "__SenaV4HoverPad" and child ~= u51 then
+				pcall(child.Destroy, child)
+			end
+		end
+	end
+
+	v21 = function(p2)
+		if not u51 or not u51.Parent then
+			return false
+		end
+
+		local Character = LocalPlayer.Character
+		local HumanoidRootPart = Character and Character:FindFirstChild("HumanoidRootPart")
+		local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+		if not HumanoidRootPart or not Humanoid then
+			return false
+		end
+
+		local v63 = typeof(p2) == "Vector3" and p2
+
+		v63 = v63 or HumanoidRootPart.Position
+		u51.CFrame = cFrameNew(v63.X, v63.Y - (Humanoid.RigType == Enum.HumanoidRigType.R15 and HumanoidRootPart.Size.Y * 0.5 + math.max(Humanoid.HipHeight, 0.5) or HumanoidRootPart.Size.Y * 0.5 + 2) - 0.5, v63.Z)
+
+		return true
+	end
+	v22 = function()
+		if not u51 or not u51.Parent or u51:GetAttribute("SenaV4RuntimeOwner") ~= v52 then
+			v57()
+
+			if u51 and u51.Parent then
+				pcall(u51.Destroy, u51)
+			end
+
+			local Part = Instance.new("Part")
+
+			Part.Name = "__SenaV4HoverPad"
+			Part:SetAttribute("SenaV4RuntimeOwner", v52)
+			Part.Anchored = true
+			Part.CanCollide = true
+			Part.CanQuery = true
+			Part.CanTouch = false
+			Part.CastShadow = false
+			Part.Transparency = 1
+			Part.Material = Enum.Material.SmoothPlastic
+			Part.Size = Vector3.new(8, 1, 8)
+			u51 = Part
+			Part.Parent = Workspace
+		end
+
+		v21()
+
+		if not connection then
+			local function v65()
+				if not v21() then
+					v22()
+				end
+			end
+
+			connection = RunService.PreSimulation:Connect(v65)
+		end
+
+		if not connection2 then
+			connection2 = RunService.PostSimulation:Connect(function()
+				v21()
+			end)
+		end
+	end
+	v23 = function()
+		if connection then
+			pcall(connection.Disconnect, connection)
+			connection = nil
+		end
+
+		if connection2 then
+			pcall(connection2.Disconnect, connection2)
+			connection2 = nil
+		end
+
+		if u51 then
+			pcall(u51.Destroy, u51)
+			u51 = nil
+		end
+
+		v57()
+	end
+	v23()
+	v24 = function()
+		u56 = nil
+	end
+	v25 = function(p3, p4)
+		if p3 and typeof(p4) == "CFrame" then
+			u56 = {
+				Character = LocalPlayer.Character,
+				RootPart = p3,
+				CFrame = p4
+			}
+		end
+	end
+
+	local function v66()
+		local v67 = u56
+
+		if type(v67) == "table" then
+			if typeof(v67.CFrame) == "CFrame" then
+				if LocalPlayer.Character == v67.Character then
+					if v67.RootPart and v67.RootPart.Parent then
+						v22()
+						v67.RootPart.AssemblyLinearVelocity = Vector3.zero
+						v67.RootPart.AssemblyAngularVelocity = Vector3.zero
+						v21(v67.CFrame.Position)
+						v67.RootPart.CFrame = v67.CFrame
+						v21(v67.CFrame.Position)
+
+						return true
+					end
+				end
+
+				u56 = nil
+
+				return false
+			end
+		end
+
+		return false
+	end
+	local function v68()
+		local Character = LocalPlayer.Character
+		local HumanoidRootPart = Character
+
+		HumanoidRootPart = HumanoidRootPart and Character:FindFirstChild("HumanoidRootPart")
+
+		for _, v in pairs(t3) do
+			if type(v) == "table" then
+				v.cancelled = true
+			end
+		end
+
+		table.clear(t3)
+
+		if HumanoidRootPart then
+			HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+			HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
+		end
+
+		v24()
+		v23()
+	end
+
+	genv.__SenaV4TweenRuntimeCleanup = function()
+		for _, v in pairs(t3) do
+			if type(v) == "table" then
+				v.cancelled = true
+			end
+		end
+
+		table.clear(t3)
+		v24()
+		v23()
+	end
+	v26 = function()
+		return getgenv and getgenv() or _G
+	end
+
+	local function v75()
+		local v76 = v26()
+		local v77 = v76[KEY]
+
+		if type(v77) ~= "table" or v77.Version ~= VERSION then
+			if type(v77) == "table" then
+				v77.Enabled = false
+			end
+
+			v77 = {
+				Version = VERSION,
+				Installed = false,
+				Enabled = false,
+				Mode = "StateBaseline",
+				Humanoid = nil,
+				RootPart = nil,
+				WalkSpeed = DEF_SPEED
+			}
+			v76[KEY] = v77
+		end
+
+		return v77
+	end
+
+	v27 = function(p5, p6)
+		local v78 = v75()
+
+		if not v78 then
+			return false
+		end
+
+		local Humanoid = p5 and p5:FindFirstChildOfClass("Humanoid")
+		local HumanoidRootPart = p5 and p5:FindFirstChild("HumanoidRootPart")
+
+		v78.Humanoid = Humanoid
+		v78.RootPart = HumanoidRootPart
+		v78.WalkSpeed = math.clamp(tonumber(p6) or DEF_SPEED, MIN_SPEED, MAX_SPEED * HEADROOM)
+		v78.Enabled = false
+
+		return Humanoid ~= nil and HumanoidRootPart ~= nil
+	end
+
+	local function v81()
+		local v82 = v26()[KEY]
+
+		if type(v82) == "table" then
+			v82.Enabled = false
+			v82.Humanoid = nil
+			v82.RootPart = nil
+		end
+	end
+	local function v83(p7, p8, p9)
+		local u84
+
+		if type(getcallbackvalue) == "function" and type(debug) == "table" and type(debug.getupvalue) == "function" then
+			local Signal = ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Signal")
+
+			if Signal then
+				local ok, result = pcall(require, Signal)
+
+				if ok and type(result) == "table" and type(result.Invoked) == "function" then
+					local ok2, result2 = pcall(result.Invoked, SIGNAL)
+
+					if ok2 and result2 then
+						local ok3, result3 = pcall(getcallbackvalue, result2, "OnInvoke")
+
+						if ok3 and type(result3) == "function" then
+							local ok4, result4 = pcall(debug.getinfo, result3)
+
+							if ok4 then
+								local function v94(p10, p11, p12)
+									if u84 or type(p10) ~= "table" or p11 > 3 or p12[p10] then
+										return
+									end
+
+									p12[p10] = true
+
+									if rawget(p10, "Player") == p7 and rawget(p10, "Character") == p7.Character then
+										if rawget(p10, "Humanoid") == p8 and rawget(p10, "RootPart") == p9 and type(rawget(p10, "SampleHistory")) == "table" and type(rawget(p10, "Evidence")) == "table" then
+											u84 = p10
+
+											return
+
+{
